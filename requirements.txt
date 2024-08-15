@@ -1,0 +1,7 @@
+whisper
+pyannote.audio
+torch>=1.9
+torchvision>=0.10
+ffmpeg-python
+tqdm
+numpy>=1.20
