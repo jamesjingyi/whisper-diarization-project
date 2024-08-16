@@ -37,13 +37,19 @@ To transcribe and diarize an audio file, use the `transcribe_and_diarize.py` scr
 
 This assumes you have done steps 1-3 in the 'Setup' section above.
 
-1. (If not already running) Activate the virtual environment
+1. Place any video or audio files into the `data` folder (these will be converted with ffmpeg)
+
+2. (If not already running) Activate the virtual environment
 
 `source venv/bin/activate`
 
-2. Run the script. At its most basic, it would look like this:
+3. Run the script. At its most basic, it would look like this:
 
-`python transcribe_and_diarize.py path_to_your_audio_file.wav`
+`python transcribe_and_diarize.py`
+
+4. This processes any of the files in `data` then outputs raw transcripts using Whisper in `transcriptions/raw_transcripts` and further diarizations in `transcriptions/diarized`
+
+The script intelligently avoids re-processing if the output files already exist (see flags to override below).
 
 ### Advanced Usage with Flags
 
@@ -56,9 +62,9 @@ Language: Specify the language spoken in the audio. Default is None, which means
 Output Directory: Specify the directory where the transcription file will be saved. Default is the current directory (./).
 `--output_dir ./transcriptions`
 
-Speaker numbers: If you know the specific amount of speakers, you can use `--num_speakers`. You can also set min and max using `-min_speakers` and `--max_speakers`.
+Speaker numbers: If you know the specific amount of speakers, you can use `--num_speakers`. You can also set min and max using `--min_speakers` and `--max_speakers`.
 
-By default, the script saves each step (transcription then diarization), so that you can re-run without re-doing everything. You can override this however using `-f` or `--force`. You can force just re-diarization using the `--force_diarization` flag.
+By default, the script avoids reprocessing each step (transcription and diarization), so that you can add new files to the `data` folder without worrying about removing old ones. You can override this however using `-f` or `--force` to reprocess both transcription and diarization, or just re-diarization using the `--force_diarization` flag.
 
 ### Example Command
 
