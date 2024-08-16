@@ -58,7 +58,7 @@ Output Directory: Specify the directory where the transcription file will be sav
 
 Speaker numbers: If you know the specific amount of speakers, you can use `--num_speakers`. You can also set min and max using `-min_speakers` and `--max_speakers`.
 
-By default, the script saves each step (transcription then diarization), so that you can re-run without re-doing everything. You can override this however using `-f` or `--force`. 
+By default, the script saves each step (transcription then diarization), so that you can re-run without re-doing everything. You can override this however using `-f` or `--force`. You can force just re-diarization using the `--force_diarization` flag.
 
 ### Example Command
 
