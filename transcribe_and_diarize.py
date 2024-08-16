@@ -1,7 +1,6 @@
 import whisper
 from pyannote.audio import Pipeline
 from pyannote.core import Segment
-from transformers import HfArgumentParser
 import sys
 import argparse
 import torch
@@ -34,7 +33,7 @@ def transcribe_audio(audio_file, model_name, language=None, force=False):
 
     return result
 
-def diarize_audio(audio_file, hf_token, num_speakers=None, min_speakers=None, max_speakers=None, force=False):
+def diarize_audio(audio_file, hf_token, num_speakers=None, force=False):
     diarization_file = audio_file + "_diarization.pkl"
     if not force and os.path.exists(diarization_file):
         print(f"Loading existing diarization from {diarization_file}...")
@@ -49,10 +48,7 @@ def diarize_audio(audio_file, hf_token, num_speakers=None, min_speakers=None, ma
     pipeline.to(device)
 
     print("Performing diarization...")
-    if num_speakers:
-        diarization = pipeline(audio_file, num_speakers=num_speakers)
-    else:
-        diarization = pipeline(audio_file, min_speakers=min_speakers, max_speakers=max_speakers)
+    diarization = pipeline(audio_file, num_speakers=num_speakers)
 
     # Save diarization to file
     with open(diarization_file, "wb") as f:
@@ -60,7 +56,7 @@ def diarize_audio(audio_file, hf_token, num_speakers=None, min_speakers=None, ma
 
     return diarization
 
-def combine_transcription_and_diarization(transcription, diarization, merge_threshold=1.0):
+def combine_transcription_and_diarization(transcription, diarization):
     segments = []
     for segment in diarization.itertracks(yield_label=True):
         start, end = segment[0].start, segment[0].end
@@ -72,27 +68,8 @@ def combine_transcription_and_diarization(transcription, diarization, merge_thre
 
         segments.append({"start": start, "end": end, "label": speaker, "text": text})
 
-    # Optionally, merge segments
-    segments = merge_segments(segments, merge_threshold=merge_threshold)
-
     combined_output = [f"{segment['label']}: {segment['text']}" for segment in segments]
     return combined_output
-
-def merge_segments(segments, merge_threshold=1.0):
-    merged_segments = []
-    prev_segment = segments[0]
-
-    for segment in segments[1:]:
-        # If the time gap between segments is less than the threshold and speakers are the same
-        if segment["start"] - prev_segment["end"] < merge_threshold and segment["label"] == prev_segment["label"]:
-            prev_segment["end"] = segment["end"]
-            prev_segment["text"] += " " + segment["text"]
-        else:
-            merged_segments.append(prev_segment)
-            prev_segment = segment
-
-    merged_segments.append(prev_segment)
-    return merged_segments
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Transcribe and diarize audio.")
@@ -102,9 +79,6 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default="./", help="Directory to save the output transcription.")
     parser.add_argument("--hf_token", type=str, required=True, help="Hugging Face API token for PyAnnote model.")
     parser.add_argument("--num_speakers", type=int, help="Exact number of speakers expected.")
-    parser.add_argument("--min_speakers", type=int, default=1, help="Minimum number of speakers expected.")
-    parser.add_argument("--max_speakers", type=int, default=5, help="Maximum number of speakers expected.")
-    parser.add_argument("--merge_threshold", type=float, default=1.0, help="Threshold to merge segments with the same speaker.")
     parser.add_argument("-f", "--force", action="store_true", help="Force re-processing of each step.")
     parser.add_argument("--force_diarization", action="store_true", help="Force re-processing of diarization step only.")
 
@@ -117,10 +91,10 @@ if __name__ == "__main__":
     transcription = transcribe_audio(converted_audio_file, model_name=args.model, language=args.language, force=args.force)
 
     # Perform speaker diarization
-    diarization = diarize_audio(converted_audio_file, hf_token=args.hf_token, num_speakers=args.num_speakers, min_speakers=args.min_speakers, max_speakers=args.max_speakers, force=args.force or args.force_diarization)
+    diarization = diarize_audio(converted_audio_file, hf_token=args.hf_token, num_speakers=args.num_speakers, force=args.force or args.force_diarization)
 
     # Combine transcription and diarization
-    combined_output = combine_transcription_and_diarization(transcription, diarization, merge_threshold=args.merge_threshold)
+    combined_output = combine_transcription_and_diarization(transcription, diarization)
 
     # Output the result
     for segment in combined_output:
