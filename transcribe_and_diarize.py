@@ -1,6 +1,7 @@
 import whisper
-from pyannote.audio import Pipeline, SpeakerDiarization
-from pyannote.audio.pipelines.utils.hook import ProgressHook
+from pyannote.audio import Pipeline
+from pyannote.core import Segment
+from transformers import HfArgumentParser
 import sys
 import argparse
 import torch
@@ -8,7 +9,6 @@ import ffmpeg
 import os
 import json
 import pickle
-import torchaudio
 
 def convert_audio(input_file):
     output_file = input_file.rsplit(".", 1)[0] + ".wav"
@@ -41,21 +41,18 @@ def diarize_audio(audio_file, hf_token, num_speakers=None, min_speakers=None, ma
         with open(diarization_file, "rb") as f:
             return pickle.load(f)
 
-    print("Loading PyAnnote models for SAD, SCD, and Embedding...")
-    sad = Pipeline.from_pretrained("pyannote/speech-activity-detection", use_auth_token=hf_token)
-    scd = Pipeline.from_pretrained("pyannote/speaker-change-detection", use_auth_token=hf_token)
-    emb = Pipeline.from_pretrained("pyannote/embedding", use_auth_token=hf_token)
+    print("Loading PyAnnote model for speaker diarization...")
+    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=hf_token)
 
-    pipeline = SpeakerDiarization(segmentation=sad, embedding=emb)
+    # Use GPU acceleration if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pipeline.to(device)
 
     print("Performing diarization...")
-    waveform, sample_rate = torchaudio.load(audio_file)
-    
-    with ProgressHook() as hook:
-        if num_speakers:
-            diarization = pipeline({"waveform": waveform, "sample_rate": sample_rate}, num_speakers=num_speakers, hook=hook)
-        else:
-            diarization = pipeline({"waveform": waveform, "sample_rate": sample_rate}, min_speakers=min_speakers, max_speakers=max_speakers, hook=hook)
+    if num_speakers:
+        diarization = pipeline(audio_file, num_speakers=num_speakers)
+    else:
+        diarization = pipeline(audio_file, min_speakers=min_speakers, max_speakers=max_speakers)
 
     # Save diarization to file
     with open(diarization_file, "wb") as f:

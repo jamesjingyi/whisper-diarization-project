@@ -5,3 +5,4 @@ torchvision>=0.10
 ffmpeg-python
 tqdm
 numpy>=1.20
+transformers>=4.0.0

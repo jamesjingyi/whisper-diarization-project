@@ -1,0 +1,5 @@
+venv/
+.DS_Store
+data/
+*_transcription.txt
+*_transcription.json
